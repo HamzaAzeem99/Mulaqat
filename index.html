@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mera Google Meet Clone</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #202124;
+            color: white;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+        h2 { margin-bottom: 10px; }
+        .controls {
+            margin-bottom: 20px;
+            background: #2f3033;
+            padding: 15px;
+            border-radius: 8px;
+            display: inline-block;
+        }
+        input, button {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: none;
+            margin: 5px;
+        }
+        button {
+            background-color: #1a73e8;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover { background-color: #1557b0; }
+        .video-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        .video-box {
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            width: 45%;
+            min-width: 300px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        video {
+            width: 100%;
+            height: auto;
+            transform: scaleX(-1); /* Mirror effect local video ke liye */
+        }
+        h3 {
+            background: #3c4043;
+            margin: 0;
+            padding: 10px;
+            font-size: 14px;
+        }
+    </style>
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+</head>
+<body>
+
+    <h2>Mera WebRTC Video Call App</h2>
+
+    <div class="controls">
+        <p>Aapki Calling ID: <strong id="my-id" style="color: #8ab4f8;">Loading...</strong></p>
+        <input type="text" id="peer-id-input" placeholder="Friend ki ID yahan dalein">
+        <button id="call-btn">Call Karein</button>
+    </div>
+
+    <div class="video-container">
+        <div class="video-box">
+            <h3>Aapki Video</h3>
+            <video id="localVideo" autoplay playsinline muted></video>
+        </div>
+        <div class="video-box">
+            <h3>Friend ki Video</h3>
+            <video id="remoteVideo" autoplay playsinline></video>
+        </div>
+    </div>
+
+    <script>
+        const localVideo = document.getElementById('localVideo');
+        const remoteVideo = document.getElementById('remoteVideo');
+        const callBtn = document.getElementById('call-btn');
+        const peerIdInput = document.getElementById('peer-id-input');
+        const myIdDisplay = document.getElementById('my-id');
+
+        let localStream;
+        let peer;
+
+        // 1. Camera aur Microphone ka access lena
+        async function init() {
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                localVideo.srcObject = localStream;
+                
+                // Camera chalu hone ke baad Peer connection banana
+                initPeer();
+            } catch (err) {
+                alert("Camera ya Mic ka access nahi mila! Kripya permission dein.");
+                console.error(err);
+            }
+        }
+
+        // 2. PeerJS Server se connect hona
+        function initPeer() {
+            peer = new Peer();
+
+            // Jab server hume ek unique ID dega
+            peer.on('open', (id) => {
+                myIdDisplay.innerText = id;
+            });
+
+            // 3. Incoming Call handle karna (Jab koi aapko call kare)
+            peer.on('call', (call) => {
+                call.answer(localStream); // Call uthana aur apni stream bhejna
+                
+                call.on('stream', (remoteStream) => {
+                    remoteVideo.srcObject = remoteStream; // Samne wale ki video dikhana
+                });
+            });
+        }
+
+        // 4. Outgoing Call handle karna (Jab aap kisi ko call karein)
+        callBtn.addEventListener('click', () => {
+            const friendId = peerIdInput.value.trim();
+            if (!friendId) {
+                alert("Kripya apne friend ki ID dalein!");
+                return;
+            }
+
+            const call = peer.call(friendId, localStream); // Friend ko call lagana
+
+            call.on('stream', (remoteStream) => {
+                remoteVideo.srcObject = remoteStream; // Friend ki video screen par dikhana
+            });
+        });
+
+        // App ko shuru karna
+        init();
+    </script>
+</body>
+</html>
